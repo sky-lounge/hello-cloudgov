@@ -1,0 +1,11 @@
+---
+applications:
+  - name: hello-cloudgov
+    buildpacks:
+      - go_buildpack
+    disk_quota: 64M
+    instances: 1
+    memory: 32M
+    path: "../src/"
+    routes:
+      - route: hello-cg-dev.de.a9sapp.eu
