@@ -1,0 +1,62 @@
+---
+blueprint-uri: sky-lounge/skylounge-library/blueprints/cloudfoundry/cloud-gov/blueprint.yml
+params:
+  build_paths: # An array of paths which trigger the build job on change. Example: ["public","nginx.conf","skylounge","cf/dev-manifest.yml"]
+  main_branch: main
+workflows:
+- workflow: pull-request
+  jobs:
+  - job: unit-test
+    steps:
+    - step: unit-test
+      uri: sky-lounge/skylounge-library/steps/unit-test/go/unit-test.yml
+      params:
+        check_latest: true
+        go_version: stable
+  - job: dependency-review
+    params:
+      config_file: sky-lounge/skylounge-library/jobs/github/security/dependency-review/config/cloud-gov.yml@main
+  - job: codeql
+    params:
+      language_array:
+      - Go
+    steps:
+    - step: build
+      uri: sky-lounge/skylounge-library/steps/github/security/codeql/auto-build/step.yml
+- workflow: development
+  jobs:
+  - job: deploy
+    steps:
+    - step: pre-deploy
+      uri: # The URI to the pre-deploy step definition. Use sky-lounge/skylounge-library/steps/no-step/step.yml to skip pre-deploy setup. Example: sky-lounge/hello-cf/skylounge/pre-deploy.yml
+    - step: deploy
+      uri: sky-lounge/skylounge-library/steps/cloudfoundry/deploy/deploy.yml
+      params:
+        cf_api: https://api.de.a9s.eu
+        cf_manifest: cf/dev-manifest.yml
+        cf_org: # The CF org. Example: "myagency"
+        cf_password: "${{ secrets.CF_DEV_PASSWORD }}"
+        cf_space: # The CF space. Example: "development"
+        cf_username: "${{ secrets.CF_DEV_USERNAME }}"
+  - job: integration-test
+    uri: # The URI to your integration tests job definition. Example: sky-lounge/hello-cf/skylounge/integration-test.yml
+- workflow: production
+  jobs:
+  - job: deploy
+    steps:
+    - step: pre-deploy
+      uri: # The URI to the pre-deploy step definition. Use sky-lounge/skylounge-library/steps/no-step/step.yml to skip pre-deploy setup. Example: sky-lounge/hello-cf/skylounge/pre-deploy.yml
+    - step: deploy
+      uri: sky-lounge/skylounge-library/steps/cloudfoundry/deploy/deploy.yml
+      params:
+        cf_api: https://api.de.a9s.eu
+        cf_manifest: cf/prod-manifest.yml
+        cf_org: # The CF org. Example: "myagency"
+        cf_password: "${{ secrets.CF_PROD_PASSWORD }}"
+        cf_space: # The CF space. Example: "development"
+        cf_username: "${{ secrets.CF_PROD_USERNAME }}"
+- workflow: scans
+  jobs:
+  - job: dependency-review
+    params:
+      config_file: sky-lounge/skylounge-library/jobs/github/security/dependency-review/config/cloud-gov.yml@main
